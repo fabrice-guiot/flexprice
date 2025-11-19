@@ -135,4 +135,8 @@ temp/*
 # OS junk
 Thumbs.db
 
+# Archive files
+*.tar.xz
+*.tar.gz
+
 server
