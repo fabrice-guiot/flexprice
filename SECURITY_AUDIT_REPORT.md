@@ -1,8 +1,8 @@
 # Comprehensive Security Audit Report
-## FlexPrice Platform - Updated February 2025
+## FlexPrice Platform - Updated February 2026
 
-**Original Audit Date:** January 19, 2025
-**Updated Audit Date:** February 12, 2025
+**Original Audit Date:** November 2025
+**Updated Audit Date:** February 12, 2026
 **Audited By:** Security Audit Team
 **Codebase:** FlexPrice Usage-Based Billing Platform
 **Technology Stack:** Go 1.23.0, PostgreSQL, ClickHouse, Kafka, Temporal
@@ -13,8 +13,8 @@
 
 | Date | Version | Changes |
 |------|---------|---------|
-| Jan 19, 2025 | 1.0 | Initial comprehensive security audit |
-| Feb 12, 2025 | 2.0 | Updated after rebase to main; verified original issues; added new payment integration vulnerabilities |
+| Nov 2025 | 1.0 | Initial comprehensive security audit |
+| Feb 12, 2026 | 2.0 | Updated after rebase to main; verified original issues; added new payment integration vulnerabilities |
 
 ---
 
@@ -29,7 +29,7 @@ This updated comprehensive security audit identified **79 security vulnerabiliti
 
 ### Status of Previous Audit Issues:
 
-**❌ CONCERNING:** Most critical vulnerabilities from the January 2025 audit remain **UNADDRESSED**:
+**❌ CONCERNING:** Most critical vulnerabilities from the November 2025 audit remain **UNADDRESSED**:
 - ✓ RBAC Bypass - **STILL PRESENT**
 - ✓ SQL Injection (14 instances) - **STILL PRESENT**
 - ✓ Environment Access Bypass - **STILL PRESENT**
@@ -320,7 +320,7 @@ if providedAPIKey != config.WebhookSecret {
 
 **Severity:** CRITICAL (CVSS 9.1)
 **File:** `internal/rbac/rbac.go:75-78`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:**
 ```go
@@ -347,7 +347,7 @@ if len(roles) == 0 {
 
 **Severity:** CRITICAL (CVSS 9.0)
 **File:** `internal/service/env_access.go:32-52`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issues:**
 - Empty environment ID grants access (lines 32-34)
@@ -367,7 +367,7 @@ if len(roles) == 0 {
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/service/auth.go:122-125`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** Login flow has different timing for non-existent vs. existing users.
 
@@ -379,7 +379,7 @@ if len(roles) == 0 {
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/auth/api_key.go:32-36`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** Map lookup is not constant-time, enabling API key enumeration.
 
@@ -391,7 +391,7 @@ if len(roles) == 0 {
 
 **Severity:** HIGH
 **File:** `internal/api/router.go`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** Only 2 endpoints have permission middleware. Sensitive operations lack authorization checks.
 
@@ -403,7 +403,7 @@ if len(roles) == 0 {
 
 **Severity:** HIGH
 **File:** `internal/auth/flexprice.go:130`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** JWT tokens have 30-day expiration and cannot be revoked.
 
@@ -415,7 +415,7 @@ if len(roles) == 0 {
 
 **Severity:** MEDIUM (CVSS 5.3)
 **File:** `internal/api/dto/auth.go:9,16`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** Only 8-character minimum required. No complexity requirements.
 
@@ -427,7 +427,7 @@ if len(roles) == 0 {
 
 **Severity:** MEDIUM (CVSS 6.5)
 **File:** `internal/api/v1/auth.go`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** Auth endpoints lack rate limiting, enabling brute force attacks.
 
@@ -441,7 +441,7 @@ if len(roles) == 0 {
 
 **Severity:** CRITICAL (CVSS 9.8)
 **File:** `internal/repository/clickhouse/builder/query_builder.go`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **14 SQL Injection Vulnerabilities Found:**
 
@@ -492,7 +492,7 @@ See section 2.3 for details.
 **Files:**
 - `internal/config/config.yaml:42`
 - `docker-compose.yml:8,55,97,101`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Found:**
 - PostgreSQL password: `flexprice123`
@@ -506,7 +506,7 @@ See section 2.3 for details.
 
 **Severity:** CRITICAL (CVSS 9.0)
 **File:** `internal/config/config.yaml:9`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Found:** JWT signing secret hardcoded: `031f6bbed1156eca...`
 
@@ -518,7 +518,7 @@ See section 2.3 for details.
 
 **Severity:** CRITICAL (CVSS 10.0)
 **File:** `internal/config/config.yaml:138`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Found:** Master encryption key hardcoded: `031f6bbed1156eca...`
 
@@ -532,7 +532,7 @@ See section 2.3 for details.
 
 **Severity:** MEDIUM
 **File:** `internal/config/config.yaml:16`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Found:** Active API key: `c3b3fa371183f0df...`
 
@@ -546,7 +546,7 @@ See section 2.3 for details.
 
 **Severity:** CRITICAL (CVSS 8.5)
 **File:** `internal/api/v1/webhook.go:347`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** HubSpot webhook signature verification uses unvalidated Host header, enabling bypass.
 
@@ -558,7 +558,7 @@ See section 2.3 for details.
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/rest/middleware/cors.go:11-13`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:**
 ```go
@@ -576,7 +576,7 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 **Severity:** HIGH (CVSS 7.0)
 **File:** `internal/api/router.go:82`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** Swagger uses client-provided Host header, enabling phishing attacks.
 
@@ -600,7 +600,7 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/api/v1/invoice.go:80-86`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** No size validation on `group_by` query array parameter.
 
@@ -628,7 +628,7 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 **Severity:** MEDIUM
 **Files:** Multiple (`tenant.go:70`, `meter.go:71,83,94,105`, etc.)
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** IDs passed to service layer without format validation.
 
@@ -642,7 +642,7 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 **Severity:** CRITICAL (CVSS 7.5)
 **File:** `internal/api/router.go:69-74`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** No rate limiting on any API endpoints, including:
 - Authentication endpoints
@@ -660,7 +660,7 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 **Severity:** HIGH
 **File:** `internal/api/router.go:91`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** Full API documentation exposed without authentication.
 
@@ -684,7 +684,7 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 **Severity:** CRITICAL (CVSS 8.5)
 **File:** `internal/email/service.go:160-177`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** `readTemplate()` function allows reading arbitrary files.
 
@@ -700,7 +700,7 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 **Files:**
 - `scripts/internal/pricing_import.go:118`
 - `scripts/internal/csv_feature_processor.go:182`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** `os.Open(filePath)` accepts user input without validation.
 
@@ -714,7 +714,7 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/integration/razorpay/client.go:285`
-**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2026)
 
 **Issue:** Direct string comparison vulnerable to timing attacks.
 
@@ -872,7 +872,7 @@ See section 2.6 for details.
 
 ### Comparison: Original vs Updated Audit
 
-| Category | Jan 2025 | Feb 2025 | Change | Status |
+| Category | Nov 2025 | Feb 2026 | Change | Status |
 |----------|----------|----------|--------|--------|
 | **Critical** | 5 | 8 | +3 | ⬆️ WORSE |
 | **High** | 23 | 32 | +9 | ⬆️ WORSE |
@@ -958,7 +958,7 @@ See section 2.6 for details.
 
 ## Conclusion
 
-The FlexPrice platform's security posture has **deteriorated** since the January 2025 audit:
+The FlexPrice platform's security posture has **deteriorated** since the November 2025 audit:
 
 **Critical Concerns:**
 - ✗ **ZERO** critical vulnerabilities from original audit have been resolved
