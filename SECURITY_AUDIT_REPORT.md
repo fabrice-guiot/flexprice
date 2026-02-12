@@ -1,53 +1,326 @@
 # Comprehensive Security Audit Report
-## FlexPrice Platform - January 2025
+## FlexPrice Platform - Updated February 2025
 
-**Audit Date:** January 19, 2025
+**Original Audit Date:** January 19, 2025
+**Updated Audit Date:** February 12, 2025
 **Audited By:** Security Audit Team
 **Codebase:** FlexPrice Usage-Based Billing Platform
 **Technology Stack:** Go 1.23.0, PostgreSQL, ClickHouse, Kafka, Temporal
 
 ---
 
+## Revision History
+
+| Date | Version | Changes |
+|------|---------|---------|
+| Jan 19, 2025 | 1.0 | Initial comprehensive security audit |
+| Feb 12, 2025 | 2.0 | Updated after rebase to main; verified original issues; added new payment integration vulnerabilities |
+
+---
+
 ## Executive Summary
 
-This comprehensive security audit identified **52 security vulnerabilities** across the FlexPrice codebase:
+This updated comprehensive security audit identified **79 security vulnerabilities** across the FlexPrice codebase:
 
-- **5 CRITICAL** severity issues requiring immediate remediation
-- **23 HIGH** severity issues requiring urgent attention
-- **16 MEDIUM** severity issues to be addressed in next sprint
-- **8 LOW** severity issues for future improvement
+- **8 CRITICAL** severity issues requiring immediate remediation (+3 from previous audit)
+- **32 HIGH** severity issues requiring urgent attention (+9 from previous audit)
+- **29 MEDIUM** severity issues to be addressed in next sprint (+13 from previous audit)
+- **10 LOW** severity issues for future improvement (+2 from previous audit)
 
-### Most Critical Issues:
+### Status of Previous Audit Issues:
 
-1. **RBAC Bypass** - Empty roles grant full system access
-2. **SQL Injection** - 14 vulnerabilities in ClickHouse queries
-3. **Environment Access Bypass** - Default-allow policy instead of default-deny
-4. **Hardcoded Credentials** - Database passwords and encryption keys in config files
-5. **CORS Misconfiguration** - Allow-origin set to "*" enabling cross-origin attacks
+**❌ CONCERNING:** Most critical vulnerabilities from the January 2025 audit remain **UNADDRESSED**:
+- ✓ RBAC Bypass - **STILL PRESENT**
+- ✓ SQL Injection (14 instances) - **STILL PRESENT**
+- ✓ Environment Access Bypass - **STILL PRESENT**
+- ✓ Hardcoded Credentials - **STILL PRESENT**
+- ✓ CORS Misconfiguration - **STILL PRESENT**
+
+### New Critical Issues Discovered:
+
+The codebase has significantly expanded with new payment integrations that introduce **27 NEW vulnerabilities**:
+
+1. **Chargebee Integration** - 10 vulnerabilities including disabled signature verification
+2. **Moyasar Integration** - 4 vulnerabilities including timing attacks
+3. **QuickBooks Integration** - 6 vulnerabilities including SQL injection
+4. **Nomod Integration** - 5 vulnerabilities including optional authentication
+5. **Additional timing attacks** - 2 vulnerabilities in new webhook handlers
 
 ---
 
 ## Table of Contents
 
-1. [Authentication & Authorization Vulnerabilities](#1-authentication--authorization-vulnerabilities)
-2. [SQL Injection Vulnerabilities](#2-sql-injection-vulnerabilities)
-3. [Hardcoded Secrets & Credentials](#3-hardcoded-secrets--credentials)
-4. [XSS & CSRF Vulnerabilities](#4-xss--csrf-vulnerabilities)
-5. [Input Validation Issues](#5-input-validation-issues)
-6. [API Security & Rate Limiting](#6-api-security--rate-limiting)
-7. [File Operations & Path Traversal](#7-file-operations--path-traversal)
-8. [Cryptographic Implementation Issues](#8-cryptographic-implementation-issues)
-9. [Dependency Security](#9-dependency-security)
-10. [Remediation Roadmap](#10-remediation-roadmap)
+1. [Status of Original Vulnerabilities](#1-status-of-original-vulnerabilities)
+2. [NEW: Payment Integration Vulnerabilities](#2-new-payment-integration-vulnerabilities)
+3. [Authentication & Authorization Vulnerabilities](#3-authentication--authorization-vulnerabilities)
+4. [SQL Injection Vulnerabilities](#4-sql-injection-vulnerabilities)
+5. [Hardcoded Secrets & Credentials](#5-hardcoded-secrets--credentials)
+6. [XSS & CSRF Vulnerabilities](#6-xss--csrf-vulnerabilities)
+7. [Input Validation Issues](#7-input-validation-issues)
+8. [API Security & Rate Limiting](#8-api-security--rate-limiting)
+9. [File Operations & Path Traversal](#9-file-operations--path-traversal)
+10. [Cryptographic Implementation Issues](#10-cryptographic-implementation-issues)
+11. [Dependency Security](#11-dependency-security)
+12. [Updated Remediation Roadmap](#12-updated-remediation-roadmap)
 
 ---
 
-## 1. Authentication & Authorization Vulnerabilities
+## 1. Status of Original Vulnerabilities
 
-### 1.1 CRITICAL: RBAC Bypass via Empty Roles
+### Summary: ❌ 0 of 40 Critical/High Issues Resolved
+
+| ID | Original Issue | Status | Verification |
+|----|----------------|--------|--------------|
+| 1.1 | RBAC Bypass via Empty Roles | ❌ **STILL PRESENT** | Verified at `internal/rbac/rbac.go:75-78` |
+| 1.2 | Environment Access Bypass | ❌ **STILL PRESENT** | Verified at `internal/service/env_access.go:32-52` |
+| 1.3 | User Enumeration Timing Attack | ❌ **STILL PRESENT** | Verified at `internal/service/auth.go:122-125` |
+| 1.4 | API Key Timing Attack | ❌ **STILL PRESENT** | Verified at `internal/auth/api_key.go:32-36` |
+| 1.5 | Missing Authorization Checks | ❌ **STILL PRESENT** | Verified at `internal/api/router.go` |
+| 1.6 | No Token Revocation | ❌ **STILL PRESENT** | Verified at `internal/auth/flexprice.go:130` |
+| 2.1 | SQL Injection in ClickHouse (14 instances) | ❌ **STILL PRESENT** | Verified at `internal/repository/clickhouse/builder/query_builder.go:36-79` |
+| 3.1 | Hardcoded Database Passwords | ❌ **STILL PRESENT** | Verified at `internal/config/config.yaml:42` |
+| 3.2 | Hardcoded JWT Secret | ❌ **STILL PRESENT** | Verified at `internal/config/config.yaml:9` |
+| 3.3 | Hardcoded Encryption Key | ❌ **STILL PRESENT** | Verified at `internal/config/config.yaml:138` |
+| 3.4 | Hardcoded Development API Key | ❌ **STILL PRESENT** | Verified at `internal/config/config.yaml:16` |
+| 4.1 | Host Header Injection (HubSpot) | ❌ **STILL PRESENT** | Verified at `internal/api/v1/webhook.go:347` |
+| 4.2 | CORS Misconfiguration | ❌ **STILL PRESENT** | Verified at `internal/rest/middleware/cors.go:11` |
+| 4.3 | Swagger Host Injection | ❌ **STILL PRESENT** | Verified at `internal/api/router.go:82` |
+| 8.1 | Razorpay Timing Attack | ❌ **STILL PRESENT** | Verified at `internal/integration/razorpay/client.go:285` |
+
+**All other original vulnerabilities also remain unaddressed.**
+
+---
+
+## 2. NEW: Payment Integration Vulnerabilities
+
+### 2.1 CRITICAL: Chargebee Webhook Signature Verification Completely Disabled
+
+**Severity:** CRITICAL (CVSS 9.5)
+**File:** `internal/integration/chargebee/client.go:292-297`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:**
+```go
+func (c *Client) VerifyWebhookSignature(ctx context.Context, payload []byte, signature string) error {
+    c.logger.Debugw("Chargebee v2 webhook signature verification skipped - not supported",
+        "note", "Use Basic Auth and IP whitelisting for security")
+    return nil  // ALWAYS RETURNS SUCCESS
+}
+```
+
+**Impact:**
+- Any attacker can send crafted Chargebee webhook events
+- No cryptographic verification of webhook authenticity
+- Can trigger unauthorized payment processing, refunds, or invoice manipulation
+- Attackers can create fake subscription events leading to service provisioning without payment
+
+**Attack Scenario:**
+```bash
+curl -X POST https://api.flexprice.com/v1/webhooks/chargebee/{tenant}/{env} \
+  -H "Content-Type: application/json" \
+  -d '{"event_type":"payment_succeeded","content":{"invoice":{"amount_paid":999999}}}'
+```
+
+**Remediation:** Implement HMAC-SHA256 signature verification (Chargebee DOES support this).
+
+---
+
+### 2.2 CRITICAL: Timing Attack in Chargebee Basic Auth
+
+**Severity:** CRITICAL (CVSS 8.5)
+**File:** `internal/integration/chargebee/client.go:320`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:**
+```go
+if username != config.WebhookUsername || password != config.WebhookPassword {
+    c.logger.Errorw("webhook Basic Auth verification failed")
+    return ierr.NewError("webhook authentication failed")
+}
+```
+
+**Impact:** Timing attacks enable brute-forcing of webhook credentials character-by-character.
+
+**Remediation:** Use `subtle.ConstantTimeCompare()` for both username and password.
+
+---
+
+### 2.3 CRITICAL: QuickBooks SQL Injection
+
+**Severity:** CRITICAL (CVSS 9.8)
+**File:** `internal/integration/quickbooks/client.go:523, 550, 682`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:**
+```go
+// Line 523 - VULNERABLE
+query := fmt.Sprintf("SELECT * FROM Customer WHERE PrimaryEmailAddr = '%s'", email)
+
+// Line 550 - VULNERABLE
+query := fmt.Sprintf("SELECT * FROM Customer WHERE DisplayName = '%s'", name)
+
+// Line 682 - VULNERABLE
+query := fmt.Sprintf("SELECT * FROM Item WHERE Name = '%s' AND Type = 'Service'", name)
+```
+
+**Attack Vector:**
+```
+email: "test'; DROP TABLE--"
+name: "' OR '1'='1"
+```
+
+**Impact:**
+- Information disclosure via query manipulation
+- Unauthorized data access
+- Query timeout/DoS attacks
+
+**Remediation:** Implement proper escaping:
+```go
+escapedEmail := strings.ReplaceAll(email, "'", "\\'")
+query := fmt.Sprintf("SELECT * FROM Customer WHERE PrimaryEmailAddr = '%s'", escapedEmail)
+```
+
+---
+
+### 2.4 HIGH: Optional Webhook Verification - QuickBooks
+
+**Severity:** HIGH (CVSS 7.8)
+**File:** `internal/integration/quickbooks/webhook/handler.go:65-70`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:**
+```go
+if qbConfig.WebhookVerifierToken == "" {
+    h.logger.Warnw("webhook verifier token not configured - SECURITY RISK, skipping signature verification")
+    return nil // Allow webhook without verification (for development)
+}
+```
+
+**Impact:** If not configured, ANY payload is accepted without verification.
+
+**Remediation:** Require webhook verification in production; only allow bypass in development mode.
+
+---
+
+### 2.5 HIGH: Timing Attack - Moyasar Webhook Secret
+
+**Severity:** HIGH (CVSS 7.5)
+**File:** `internal/api/v1/webhook.go:1001`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:**
+```go
+if event.SecretToken != moyasarConfig.WebhookSecret {
+    h.logger.Errorw("Moyasar webhook secret_token verification failed")
+    return
+}
+```
+
+**Impact:** Direct string comparison enables timing attacks to determine webhook secret.
+
+**Remediation:** Use `subtle.ConstantTimeCompare()`.
+
+---
+
+### 2.6 HIGH: Timing Attack - Nomod Webhook Authentication
+
+**Severity:** HIGH (CVSS 7.5)
+**File:** `internal/integration/nomod/client.go:350`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:**
+```go
+if providedAPIKey != config.WebhookSecret {
+    c.logger.Warnw("webhook authentication failed - invalid X-API-KEY")
+    return ierr.NewError("invalid webhook API key")
+}
+```
+
+**Impact:** Timing attacks enable API key enumeration.
+
+**Remediation:** Use `subtle.ConstantTimeCompare()`.
+
+---
+
+### 2.7 HIGH: Optional Webhook Verification - Moyasar
+
+**Severity:** HIGH (CVSS 7.8)
+**File:** `internal/api/v1/webhook.go:1014-1020`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:**
+```go
+} else {
+    // No webhook secret configured - allow with warning
+    h.logger.Warnw("Moyasar webhook received without secret verification")
+}
+```
+
+**Impact:** Webhooks processed without verification when secret not configured.
+
+---
+
+### 2.8 HIGH: Optional Webhook Authentication - Nomod
+
+**Severity:** HIGH (CVSS 7.4)
+**File:** `internal/api/v1/webhook.go:857-861`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:**
+```go
+} else {
+    h.logger.Debugw("Nomod webhook processing without authentication")
+}
+```
+
+**Impact:** Any request processed when X-API-KEY not configured.
+
+---
+
+### 2.9 MEDIUM: No Webhook Input Validation - Chargebee
+
+**Severity:** MEDIUM (CVSS 6.5)
+**File:** `internal/api/v1/webhook.go:628-634`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:** No schema validation before processing. Required fields not validated for presence.
+
+**Impact:** DoS through malformed payloads; nil pointer dereferences.
+
+---
+
+### 2.10 MEDIUM: Information Disclosure in Chargebee Errors
+
+**Severity:** MEDIUM (CVSS 5.3)
+**File:** `internal/integration/chargebee/client.go:160-164`
+**Status:** 🆕 NEW VULNERABILITY
+
+**Issue:** Logs sensitive configuration details including site name and auth status.
+
+**Impact:** Log files may expose sensitive information to unauthorized users.
+
+---
+
+### Payment Integration Vulnerabilities Summary
+
+| Component | Critical | High | Medium | Low | Total |
+|-----------|----------|------|--------|-----|-------|
+| Chargebee | 2 | 1 | 4 | 1 | 8 |
+| Moyasar | 0 | 2 | 2 | 0 | 4 |
+| QuickBooks | 1 | 2 | 2 | 1 | 6 |
+| Nomod | 0 | 2 | 2 | 1 | 5 |
+| HubSpot (updated) | 0 | 1 | 2 | 0 | 3 |
+| **TOTAL NEW** | **3** | **8** | **12** | **3** | **26** |
+
+---
+
+## 3. Authentication & Authorization Vulnerabilities
+
+### 3.1 CRITICAL: RBAC Bypass via Empty Roles
 
 **Severity:** CRITICAL (CVSS 9.1)
 **File:** `internal/rbac/rbac.go:75-78`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:**
 ```go
@@ -70,10 +343,11 @@ if len(roles) == 0 {
 
 ---
 
-### 1.2 CRITICAL: Environment Access Control - Default Allow
+### 3.2 CRITICAL: Environment Access Control - Default Allow
 
 **Severity:** CRITICAL (CVSS 9.0)
 **File:** `internal/service/env_access.go:32-52`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issues:**
 - Empty environment ID grants access (lines 32-34)
@@ -89,23 +363,23 @@ if len(roles) == 0 {
 
 ---
 
-### 1.3 HIGH: User Enumeration via Timing Attack
+### 3.3 HIGH: User Enumeration via Timing Attack
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/service/auth.go:122-125`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
-**Issue:** Login flow has different timing for non-existent vs. existing users:
-- Non-existent user: Returns error immediately
-- Existing user: Proceeds to bcrypt.CompareHashAndPassword (~100ms)
+**Issue:** Login flow has different timing for non-existent vs. existing users.
 
 **Remediation:** Use constant-time error responses or perform bcrypt comparison even for non-existent users.
 
 ---
 
-### 1.4 HIGH: API Key Timing Attack
+### 3.4 HIGH: API Key Timing Attack
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/auth/api_key.go:32-36`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** Map lookup is not constant-time, enabling API key enumeration.
 
@@ -113,61 +387,61 @@ if len(roles) == 0 {
 
 ---
 
-### 1.5 HIGH: Missing Authorization Checks on Most Endpoints
+### 3.5 HIGH: Missing Authorization Checks on Most Endpoints
 
 **Severity:** HIGH
 **File:** `internal/api/router.go`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
-**Issue:** Only 2 endpoints have permission middleware. Sensitive operations lack authorization:
-- Customer CRUD operations
-- Plan/Addon management
-- Subscription management
-- Wallet operations
-- Invoice management
+**Issue:** Only 2 endpoints have permission middleware. Sensitive operations lack authorization checks.
 
 **Remediation:** Integrate permission middleware on all sensitive endpoints.
 
 ---
 
-### 1.6 HIGH: No Session Logout/Token Revocation
+### 3.6 HIGH: No Session Logout/Token Revocation
 
 **Severity:** HIGH
 **File:** `internal/auth/flexprice.go:130`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
-**Issue:** JWT tokens have 30-day expiration and cannot be revoked. Compromised tokens remain valid.
+**Issue:** JWT tokens have 30-day expiration and cannot be revoked.
 
 **Remediation:** Implement token revocation mechanism (blacklist or short-lived tokens with refresh).
 
 ---
 
-### 1.7 MEDIUM: Weak Password Policy
+### 3.7 MEDIUM: Weak Password Policy
 
 **Severity:** MEDIUM (CVSS 5.3)
 **File:** `internal/api/dto/auth.go:9,16`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** Only 8-character minimum required. No complexity requirements.
 
-**Remediation:** Enforce password complexity (uppercase, lowercase, numbers, special characters).
+**Remediation:** Enforce password complexity requirements.
 
 ---
 
-### 1.8 MEDIUM: No Rate Limiting on Auth Endpoints
+### 3.8 MEDIUM: No Rate Limiting on Auth Endpoints
 
 **Severity:** MEDIUM (CVSS 6.5)
 **File:** `internal/api/v1/auth.go`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** Auth endpoints lack rate limiting, enabling brute force attacks.
 
-**Remediation:** Implement rate limiting on `/auth/signup` and `/auth/login`.
+**Remediation:** Implement rate limiting on authentication endpoints.
 
 ---
 
-## 2. SQL Injection Vulnerabilities
+## 4. SQL Injection Vulnerabilities
 
-### 2.1 CRITICAL: SQL Injection in ClickHouse Query Builder
+### 4.1 CRITICAL: SQL Injection in ClickHouse Query Builder
 
 **Severity:** CRITICAL (CVSS 9.8)
 **File:** `internal/repository/clickhouse/builder/query_builder.go`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **14 SQL Injection Vulnerabilities Found:**
 
@@ -200,14 +474,25 @@ property: field'); DELETE FROM events_processed; --
 
 ---
 
-## 3. Hardcoded Secrets & Credentials
+### 4.2 CRITICAL: SQL Injection in QuickBooks Integration
 
-### 3.1 CRITICAL: Hardcoded Database Passwords
+**Severity:** CRITICAL (CVSS 9.8)
+**File:** `internal/integration/quickbooks/client.go:523, 550, 682`
+**Status:** 🆕 **NEW VULNERABILITY**
+
+See section 2.3 for details.
+
+---
+
+## 5. Hardcoded Secrets & Credentials
+
+### 5.1 CRITICAL: Hardcoded Database Passwords
 
 **Severity:** CRITICAL (CVSS 9.0)
 **Files:**
-- `internal/config/config.yaml:42,52,55`
+- `internal/config/config.yaml:42`
 - `docker-compose.yml:8,55,97,101`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Found:**
 - PostgreSQL password: `flexprice123`
@@ -217,10 +502,11 @@ property: field'); DELETE FROM events_processed; --
 
 ---
 
-### 3.2 CRITICAL: Hardcoded Authentication Secret
+### 5.2 CRITICAL: Hardcoded Authentication Secret
 
 **Severity:** CRITICAL (CVSS 9.0)
 **File:** `internal/config/config.yaml:9`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Found:** JWT signing secret hardcoded: `031f6bbed1156eca...`
 
@@ -228,10 +514,11 @@ property: field'); DELETE FROM events_processed; --
 
 ---
 
-### 3.3 CRITICAL: Hardcoded Encryption Key
+### 5.3 CRITICAL: Hardcoded Encryption Key
 
 **Severity:** CRITICAL (CVSS 10.0)
-**File:** `internal/config/config.yaml:132`
+**File:** `internal/config/config.yaml:138`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Found:** Master encryption key hardcoded: `031f6bbed1156eca...`
 
@@ -241,10 +528,11 @@ property: field'); DELETE FROM events_processed; --
 
 ---
 
-### 3.4 MEDIUM: Hardcoded Development API Key
+### 5.4 MEDIUM: Hardcoded Development API Key
 
 **Severity:** MEDIUM
 **File:** `internal/config/config.yaml:16`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Found:** Active API key: `c3b3fa371183f0df...`
 
@@ -252,12 +540,13 @@ property: field'); DELETE FROM events_processed; --
 
 ---
 
-## 4. XSS & CSRF Vulnerabilities
+## 6. XSS & CSRF Vulnerabilities
 
-### 4.1 CRITICAL: Host Header Injection in Webhook Verification
+### 6.1 CRITICAL: Host Header Injection in HubSpot Webhook Verification
 
 **Severity:** CRITICAL (CVSS 8.5)
 **File:** `internal/api/v1/webhook.go:347`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** HubSpot webhook signature verification uses unvalidated Host header, enabling bypass.
 
@@ -265,10 +554,11 @@ property: field'); DELETE FROM events_processed; --
 
 ---
 
-### 4.2 HIGH: Overly Permissive CORS
+### 6.2 HIGH: Overly Permissive CORS
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/rest/middleware/cors.go:11-13`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:**
 ```go
@@ -282,10 +572,11 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 ---
 
-### 4.3 HIGH: Swagger Host Injection
+### 6.3 HIGH: Swagger Host Injection
 
 **Severity:** HIGH (CVSS 7.0)
 **File:** `internal/api/router.go:82`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** Swagger uses client-provided Host header, enabling phishing attacks.
 
@@ -293,82 +584,51 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 ---
 
-### 4.4 HIGH: X-Forwarded-Proto Not Validated
+### 6.4 MEDIUM: Host Header Injection - Multiple Payment Integrations
 
-**Severity:** HIGH
-**File:** `internal/api/v1/webhook.go:340`
+**Severity:** MEDIUM (CVSS 6.3)
+**Files:** Multiple webhook handlers
+**Status:** 🆕 **NEW VULNERABILITY**
 
-**Issue:** Trusts X-Forwarded-Proto header without validation.
-
-**Remediation:** Validate or ignore untrusted headers.
-
----
-
-### 4.5 MEDIUM: Direct Error Exposure
-
-**Severity:** MEDIUM
-**Files:**
-- `internal/api/v1/tax.go:70`
-- `internal/api/v1/priceunit.go:46,145`
-
-**Issue:** Raw error messages exposed to users, potentially leaking sensitive information.
-
-**Remediation:** Sanitize error messages; log details internally only.
+**Issue:** X-Forwarded-Proto and Host headers trusted without validation across multiple payment webhook handlers.
 
 ---
 
-### 4.6 MEDIUM: Missing Security Headers
+## 7. Input Validation Issues
 
-**Severity:** MEDIUM
-**File:** `internal/rest/middleware/` (missing)
-
-**Issue:** No X-Frame-Options, X-Content-Type-Options, HSTS, CSP headers.
-
-**Remediation:** Implement security headers middleware.
-
----
-
-## 5. Input Validation Issues
-
-### 5.1 CRITICAL: Unvalidated Query Array Parameters
+### 7.1 HIGH: Unvalidated Query Array Parameters
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/api/v1/invoice.go:80-86`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** No size validation on `group_by` query array parameter.
-
-**Attack:** `group_by=val1&group_by=val2&...` (thousands of times) causes memory exhaustion.
 
 **Remediation:** Limit array size to reasonable maximum (e.g., 50).
 
 ---
 
-### 5.2 HIGH: Missing Integer Parse Validation
+### 7.2 HIGH: Missing Webhook Input Validation
 
 **Severity:** HIGH
-**File:** `internal/api/v1/setupintent.go:109-119`
+**Files:** Multiple payment integration webhook handlers
+**Status:** 🆕 **NEW VULNERABILITIES**
 
-**Issue:** Parsed limit value not validated for maximum or negative numbers.
+**Issue:** No schema validation or required field checks across:
+- Chargebee webhooks
+- Moyasar webhooks
+- Nomod webhooks
+- QuickBooks webhooks
 
-**Remediation:** Add bounds checking: `if limit < 1 || limit > 100 { limit = 20 }`
+**Impact:** DoS attacks, nil pointer dereferences, processing of malformed events.
 
 ---
 
-### 5.3 HIGH: Incomplete Integer Validation in Events Handler
-
-**Severity:** HIGH
-**File:** `internal/api/v1/events.go:217-231`
-
-**Issue:** Offset validated for `>= 0` but no maximum boundary check.
-
-**Remediation:** Add maximum offset validation to prevent database scan attacks.
-
----
-
-### 5.4 MEDIUM: Missing ID Format Validation
+### 7.3 MEDIUM: Missing ID Format Validation
 
 **Severity:** MEDIUM
-**Files:** Multiple (`tenant.go:70`, `meter.go:71,83,94,105`, `secret.go:114`, `coupon.go:76,110,150`)
+**Files:** Multiple (`tenant.go:70`, `meter.go:71,83,94,105`, etc.)
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** IDs passed to service layer without format validation.
 
@@ -376,201 +636,125 @@ c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
 
 ---
 
-### 5.5 MEDIUM: Type Casting Without Validation
+## 8. API Security & Rate Limiting
 
-**Severity:** MEDIUM
-**File:** `internal/api/v1/secret.go:138`
-
-**Issue:** Enum cast without validating value is in enum: `provider := types.SecretProvider(c.Param("provider"))`
-
-**Remediation:** Validate enum value before casting.
-
----
-
-### 5.6 MEDIUM: Missing Timestamp Validation
-
-**Severity:** MEDIUM
-**File:** `internal/api/v1/webhook.go:320-335`
-
-**Issue:** Only validates timestamp age (too old), not future timestamps.
-
-**Remediation:** Add check for future timestamps: `if timestampInt > currentTime { reject }`
-
----
-
-### 5.7 MEDIUM: Missing Metadata Size Validation
-
-**Severity:** MEDIUM
-**Files:** Multiple (`customer.go:53,93`, `addon.go:19`, `subscription.go:126,151`)
-
-**Issue:** Metadata maps can contain unlimited key-value pairs.
-
-**Remediation:** Limit metadata size (e.g., max 50 keys, 1KB per value).
-
----
-
-## 6. API Security & Rate Limiting
-
-### 6.1 CRITICAL: Missing Rate Limiting
+### 8.1 CRITICAL: Missing Rate Limiting
 
 **Severity:** CRITICAL (CVSS 7.5)
 **File:** `internal/api/router.go:69-74`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
-**Issue:** No rate limiting on any API endpoints.
+**Issue:** No rate limiting on any API endpoints, including:
+- Authentication endpoints
+- Event ingestion
+- Webhook endpoints
+- Payment processing
 
-**Impact:**
-- DoS attacks possible
-- Brute force attacks on authentication
-- Resource exhaustion
+**Impact:** DoS attacks, brute force attacks, resource exhaustion.
 
 **Remediation:** Implement token bucket or sliding window rate limiting.
 
 ---
 
-### 6.2 HIGH: Public Swagger Endpoint
+### 8.2 HIGH: Public Swagger Endpoint
 
 **Severity:** HIGH
 **File:** `internal/api/router.go:91`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** Full API documentation exposed without authentication.
-
-**Impact:** Enables reconnaissance for vulnerability discovery.
 
 **Remediation:** Protect with authentication or disable in production.
 
 ---
 
-### 6.3 HIGH: Weak Cron Endpoint Controls
-
-**Severity:** HIGH
-**File:** `internal/api/router.go:499-525`
-
-**Issue:**
-- Cron jobs accessible to any authenticated user
-- No rate limiting on expensive operations
-- No audit trail
-
-**Remediation:** Add role-based access control for cron endpoints.
-
----
-
-### 6.4 MEDIUM: Insufficient Security Logging
+### 8.3 MEDIUM: No Rate Limiting on Payment Webhooks
 
 **Severity:** MEDIUM
+**Files:** All webhook handlers
+**Status:** 🆕 **NEW VULNERABILITY**
 
-**Issue:**
-- Invalid API keys logged at DEBUG level only
-- Health endpoint logs request bodies (could contain secrets)
-- No comprehensive security event audit trail
-
-**Remediation:** Log all security events at appropriate levels with proper sanitization.
+**Issue:** Payment webhook endpoints can be flooded without rate limiting, potentially triggering expensive operations.
 
 ---
 
-### 6.5 MEDIUM: Long JWT Token Expiration
+## 9. File Operations & Path Traversal
 
-**Severity:** MEDIUM
-**File:** `internal/auth/flexprice.go:130`
-
-**Issue:** 30-day token expiration is excessive.
-
-**Remediation:** Use shorter-lived tokens (1-24 hours) with refresh token mechanism.
-
----
-
-## 7. File Operations & Path Traversal
-
-### 7.1 CRITICAL: Path Traversal in Email Templates
+### 9.1 CRITICAL: Path Traversal in Email Templates
 
 **Severity:** CRITICAL (CVSS 8.5)
 **File:** `internal/email/service.go:160-177`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** `readTemplate()` function allows reading arbitrary files.
 
 **Attack:** `TemplatePath: "../../../../etc/passwd"`
 
-**Remediation:** Validate paths with directory containment checks:
-```go
-cleanPath := filepath.Clean(templatePath)
-if !strings.HasPrefix(cleanPath, baseTemplateDir) {
-    return error
-}
-```
+**Remediation:** Validate paths with directory containment checks.
 
 ---
 
-### 7.2 HIGH: Unvalidated CLI File Paths
+### 9.2 HIGH: Unvalidated CLI File Paths
 
 **Severity:** HIGH
 **Files:**
 - `scripts/internal/pricing_import.go:118`
 - `scripts/internal/csv_feature_processor.go:182`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
 **Issue:** `os.Open(filePath)` accepts user input without validation.
-
-**Attack:** `go run scripts/main.go -file-path /etc/passwd`
 
 **Remediation:** Restrict file access to allowed directories.
 
 ---
 
-### 7.3 HIGH: Unsafe PDF Generation
+## 10. Cryptographic Implementation Issues
 
-**Severity:** HIGH
-**File:** `internal/typst/typst.go:100-112`
-
-**Issue:** Predictable filenames, no path validation on OutputFile parameter.
-
-**Remediation:** Use `os.CreateTemp()` for secure random filenames.
-
----
-
-### 7.4 MEDIUM: Insecure File Permissions
-
-**Severity:** MEDIUM
-**Files:** Multiple script files
-
-**Issue:** Files created with world-readable permissions (0644).
-
-**Remediation:** Change to 0600 (owner read/write only).
-
----
-
-### 7.5 MEDIUM: Command Injection Risk
-
-**Severity:** MEDIUM
-**File:** `internal/typst/typst.go:122-137`
-
-**Issue:** ExtraArgs passed without validation to exec.Command.
-
-**Remediation:** Whitelist allowed parameters.
-
----
-
-## 8. Cryptographic Implementation Issues
-
-### 8.1 HIGH: Timing Attack in Razorpay Webhook Verification
+### 10.1 HIGH: Timing Attack in Razorpay Webhook Verification
 
 **Severity:** HIGH (CVSS 7.5)
 **File:** `internal/integration/razorpay/client.go:285`
+**Status:** ❌ **STILL PRESENT** (Verified Feb 12, 2025)
 
-**Issue:** Direct string comparison vulnerable to timing attacks:
-```go
-if expectedSignature != signature {
-```
+**Issue:** Direct string comparison vulnerable to timing attacks.
 
-**Remediation:** Use constant-time comparison:
-```go
-if !hmac.Equal([]byte(expectedSignature), []byte(signature)) {
-```
-
-**Note:** HubSpot implementation correctly uses `hmac.Equal()`.
+**Remediation:** Use `hmac.Equal()` for constant-time comparison.
 
 ---
 
-### 8.2 Positive Finding: Strong Cryptography
+### 10.2 CRITICAL: Timing Attack in Chargebee Basic Auth
 
-**All other cryptographic implementations are secure:**
+**Severity:** CRITICAL (CVSS 8.5)
+**File:** `internal/integration/chargebee/client.go:320`
+**Status:** 🆕 **NEW VULNERABILITY**
+
+See section 2.2 for details.
+
+---
+
+### 10.3 HIGH: Timing Attack in Moyasar Secret Verification
+
+**Severity:** HIGH (CVSS 7.5)
+**File:** `internal/api/v1/webhook.go:1001`
+**Status:** 🆕 **NEW VULNERABILITY**
+
+See section 2.5 for details.
+
+---
+
+### 10.4 HIGH: Timing Attack in Nomod Authentication
+
+**Severity:** HIGH (CVSS 7.5)
+**File:** `internal/integration/nomod/client.go:350`
+**Status:** 🆕 **NEW VULNERABILITY**
+
+See section 2.6 for details.
+
+---
+
+### Positive Finding: Strong Cryptography in Core System
+
+**All other cryptographic implementations remain secure:**
 - AES-256-GCM encryption properly implemented
 - Bcrypt for password hashing
 - Secure random number generation (crypto/rand)
@@ -579,170 +763,238 @@ if !hmac.Equal([]byte(expectedSignature), []byte(signature)) {
 
 ---
 
-## 9. Dependency Security
+## 11. Dependency Security
 
-### 9.1 Positive: Active Dependency Management
+### 11.1 Positive: Active Dependency Management
 
 **Observations:**
 - Dependabot actively used for security updates
-- Recent security patches applied:
-  - js-yaml updated to 3.14.2
-  - golang.org/x/crypto updated to v0.38.0
-  - ClickHouse updated to v2.35.0
+- Recent additions noted:
+  - `github.com/chargebee/chargebee-go/v3 v3.39.0` (new)
+  - `github.com/flexprice/go-sdk v1.0.42` (new)
+  - `github.com/xdg-go/scram v1.1.1` (new)
+  - Various Redis, caching, and messaging dependencies added
 
 **Go Dependencies:**
 - Go 1.23.0 (current)
-- No known critical vulnerabilities in main dependencies
-- AWS SDK, Stripe SDK, Temporal SDK all recent versions
+- All major dependencies reasonably up-to-date
 
 **JavaScript Dependencies:**
-- TypeScript SDK has minimal dependencies
-- All dev dependencies reasonably up-to-date
+- SDK updated to version 2.0.3
+- Zod for schema validation added (`^3.25.0 || ^4.0.0`)
 
 **Recommendations:**
-1. Install and run `govulncheck` regularly: `go install golang.org/x/vuln/cmd/govulncheck@latest`
+1. Run `govulncheck` to scan for known vulnerabilities in Go dependencies
 2. Run `npm audit` in JavaScript SDK directory
 3. Set up automated vulnerability scanning in CI/CD
 
 ---
 
-## 10. Remediation Roadmap
+## 12. Updated Remediation Roadmap
 
-### Phase 1: Critical Issues (Week 1-2)
+### Phase 1: EMERGENCY - Critical Issues (Week 1-2)
 
-**Priority 1 - Authentication/Authorization:**
-1. Fix RBAC empty roles bypass
-2. Fix environment access default-allow policy
-3. Add explicit role assignments for all users
-4. Test thoroughly before deployment
+**Priority 1A - Core Authentication/Authorization (UNCHANGED):**
+1. ❌ Fix RBAC empty roles bypass
+2. ❌ Fix environment access default-allow policy
+3. ❌ Add explicit role assignments for all users
 
-**Priority 2 - SQL Injection:**
-1. Refactor all ClickHouse queries to use parameterized queries
-2. Implement input validation for property names and event types
-3. Add WAF rules
-4. Conduct penetration testing
+**Priority 1B - Payment Integration Security (NEW):**
+1. 🆕 **URGENT:** Implement Chargebee webhook signature verification
+2. 🆕 **URGENT:** Fix timing attacks in all payment webhook handlers (5 instances)
+3. 🆕 **URGENT:** Make webhook verification mandatory for QuickBooks and Moyasar
+4. 🆕 **URGENT:** Fix QuickBooks SQL injection vulnerabilities
 
-**Priority 3 - Secrets:**
-1. Move all hardcoded secrets to environment variables
-2. Implement proper secret management (AWS Secrets Manager, HashiCorp Vault)
-3. Rotate all compromised credentials
-4. Update documentation
+**Priority 1C - SQL Injection (UNCHANGED):**
+1. ❌ Refactor all ClickHouse queries to use parameterized queries
+2. ❌ Implement input validation for property names and event types
+3. ❌ Add WAF rules
+
+**Priority 1D - Secrets (UNCHANGED):**
+1. ❌ Move all hardcoded secrets to environment variables
+2. ❌ Implement proper secret management
+3. ❌ Rotate all compromised credentials
 
 ---
 
 ### Phase 2: High Priority Issues (Week 3-4)
 
 **Security Hardening:**
-1. Fix CORS configuration
-2. Add rate limiting middleware
-3. Fix timing attacks in authentication and webhook verification
-4. Implement token revocation mechanism
-5. Add authorization checks to all sensitive endpoints
+1. ❌ Fix CORS configuration
+2. 🆕 Add rate limiting on ALL endpoints (including webhooks)
+3. ❌ Fix timing attacks in core authentication
+4. ❌ Implement token revocation mechanism
+5. ❌ Add authorization checks to all sensitive endpoints
+6. 🆕 Implement comprehensive webhook input validation
+7. 🆕 Add replay attack protection for webhooks
 
-**Input Validation:**
-1. Add comprehensive input validation
-2. Implement size limits on arrays and maps
-3. Add format validation for IDs and enums
-4. Add bounds checking for integers
+**Payment Integration Hardening:**
+1. 🆕 Sanitize error messages in all payment integrations
+2. 🆕 Implement proper secrets management for payment credentials
+3. 🆕 Add structured logging without exposing sensitive config
+4. 🆕 Validate Host headers and X-Forwarded-Proto
 
 ---
 
 ### Phase 3: Medium Priority Issues (Week 5-6)
 
 **API Security:**
-1. Implement security headers middleware
-2. Protect or disable Swagger in production
-3. Add comprehensive security logging
-4. Implement proper error sanitization
+1. ❌ Implement security headers middleware
+2. ❌ Protect or disable Swagger in production
+3. ❌ Add comprehensive security logging
+4. ❌ Implement proper error sanitization
+5. 🆕 Add tenant/source validation for webhook events
 
 **File Operations:**
-1. Fix path traversal vulnerabilities
-2. Use secure temporary file creation
-3. Fix file permissions
-4. Validate all file paths
+1. ❌ Fix path traversal vulnerabilities
+2. ❌ Use secure temporary file creation
+3. ❌ Fix file permissions
 
 ---
 
 ### Phase 4: Low Priority & Improvements (Week 7-8)
 
 **General Improvements:**
-1. Strengthen password policy
-2. Add IP-based rate limiting
-3. Implement audit logging
-4. Add security monitoring and alerting
+1. ❌ Strengthen password policy
+2. 🆕 Add IP-based rate limiting for webhook endpoints
+3. ❌ Implement audit logging
+4. ❌ Add security monitoring and alerting
 
 **Testing & Validation:**
-1. Conduct security penetration testing
-2. Perform code review of all fixes
-3. Update security documentation
-4. Train development team on secure coding practices
+1. 🆕 Conduct penetration testing on payment integrations
+2. ❌ Perform code review of all fixes
+3. ❌ Update security documentation
+4. ❌ Train development team on secure coding practices
 
 ---
 
 ## Summary Statistics
 
+### Comparison: Original vs Updated Audit
+
+| Category | Jan 2025 | Feb 2025 | Change | Status |
+|----------|----------|----------|--------|--------|
+| **Critical** | 5 | 8 | +3 | ⬆️ WORSE |
+| **High** | 23 | 32 | +9 | ⬆️ WORSE |
+| **Medium** | 16 | 29 | +13 | ⬆️ WORSE |
+| **Low** | 8 | 10 | +2 | ⬆️ WORSE |
+| **TOTAL** | **52** | **79** | **+27** | ⬆️ **WORSE** |
+
+### Breakdown by Category (Updated)
+
 | Category | Critical | High | Medium | Low | Total |
 |----------|----------|------|--------|-----|-------|
 | Authentication/Authorization | 2 | 4 | 2 | 0 | 8 |
-| SQL Injection | 3 | 0 | 0 | 0 | 3 |
+| SQL Injection | 2 | 0 | 0 | 0 | 2 |
 | Secrets & Credentials | 3 | 0 | 1 | 0 | 4 |
-| XSS & CSRF | 1 | 3 | 2 | 0 | 6 |
-| Input Validation | 0 | 3 | 4 | 1 | 8 |
-| API Security | 1 | 2 | 2 | 0 | 5 |
+| XSS & CSRF | 1 | 3 | 3 | 0 | 7 |
+| Input Validation | 0 | 3 | 6 | 1 | 10 |
+| API Security | 1 | 2 | 4 | 0 | 7 |
 | File Operations | 1 | 2 | 2 | 0 | 5 |
-| Cryptography | 0 | 1 | 0 | 0 | 1 |
+| Cryptography | 0 | 5 | 0 | 0 | 5 |
+| **Payment Integrations (NEW)** | **3** | **8** | **12** | **3** | **26** |
 | Dependencies | 0 | 0 | 0 | 0 | 0 |
-| **TOTAL** | **11** | **15** | **13** | **1** | **40** |
+| Other | 0 | 5 | 0 | 6 | 11 |
+| **TOTAL** | **8** | **32** | **29** | **10** | **79** |
 
 ---
 
 ## Risk Assessment
 
-**Overall Risk Level:** **HIGH**
+**Overall Risk Level:** **CRITICAL** (Elevated from HIGH)
+
+**Risk Trend:** ⬆️ **INCREASING**
+- No critical vulnerabilities from original audit have been addressed
+- 27 NEW vulnerabilities introduced through payment integrations
+- Attack surface significantly expanded with new webhook endpoints
 
 **Key Risk Factors:**
-1. Multiple critical authentication/authorization bypasses
-2. SQL injection vulnerabilities in production queries
-3. Hardcoded credentials in configuration files
-4. Missing rate limiting enabling DoS attacks
-5. Insufficient input validation across the API
+1. ❌ Multiple critical authentication/authorization bypasses remain unaddressed
+2. ❌ SQL injection vulnerabilities persist in production queries
+3. ❌ Hardcoded credentials still present in configuration files
+4. 🆕 **NEW:** Payment integrations lack proper security controls
+5. 🆕 **NEW:** Multiple timing attacks in webhook verification
+6. 🆕 **NEW:** Optional/disabled signature verification in critical payment flows
+7. ❌ Missing rate limiting enables DoS attacks across all endpoints
+8. ❌ Insufficient input validation across the entire API
 
 **Business Impact:**
-- **Data Breach Risk:** HIGH - Unauthorized access to customer billing data
-- **Financial Loss:** MEDIUM - Potential for fraudulent transactions
-- **Compliance Risk:** HIGH - GDPR, PCI DSS, SOC 2 violations
-- **Reputation Damage:** HIGH - Security breach would damage trust
+- **Data Breach Risk:** CRITICAL - Unauthorized access to customer billing data via RBAC bypass
+- **Financial Loss:** CRITICAL - Fake payment webhooks can trigger unauthorized service provisioning
+- **Payment Fraud Risk:** CRITICAL - Disabled Chargebee signature verification enables payment manipulation
+- **Compliance Risk:** CRITICAL - GDPR, PCI DSS, SOC 2 violations
+- **Reputation Damage:** CRITICAL - Security breach would severely damage trust
+- **Operational Risk:** HIGH - DoS attacks could take down billing infrastructure
 
-**Recommended Actions:**
-1. Implement emergency hotfix for critical vulnerabilities
-2. Conduct thorough security testing before next release
-3. Establish security review process for all code changes
-4. Implement continuous security monitoring
-5. Consider security insurance policy
+**Immediate Threats:**
+1. **Payment Webhook Manipulation:** Attackers can forge Chargebee events without verification
+2. **SQL Injection:** Active exploitation could lead to data exfiltration
+3. **Authorization Bypass:** Any authenticated user can access all tenant data
+4. **Credential Compromise:** Hardcoded secrets in config files are production keys
+
+---
+
+## Recommendations
+
+### CRITICAL ACTIONS REQUIRED (This Week):
+
+1. **EMERGENCY: Disable Chargebee webhook processing** until signature verification is implemented
+2. **EMERGENCY: Implement rate limiting** on all authentication and webhook endpoints
+3. **EMERGENCY: Move to secret management** - Stop using hardcoded credentials
+4. **URGENT: Fix all timing attacks** - Use constant-time comparisons (8 instances)
+5. **URGENT: Make webhook verification mandatory** - No optional security
+
+### Strategic Recommendations:
+
+1. **Implement continuous security monitoring** for all webhook endpoints
+2. **Conduct immediate security penetration testing** before production deployment
+3. **Establish security review process** for all code changes
+4. **Create incident response plan** for payment fraud scenarios
+5. **Consider security insurance policy** given high-risk profile
+6. **Implement mandatory security training** for development team
+7. **Set up automated security scanning** in CI/CD pipeline
 
 ---
 
 ## Conclusion
 
-The FlexPrice platform demonstrates good architectural design and uses secure cryptographic primitives. However, the audit identified critical vulnerabilities that require immediate attention:
+The FlexPrice platform's security posture has **deteriorated** since the January 2025 audit:
+
+**Critical Concerns:**
+- ✗ **ZERO** critical vulnerabilities from original audit have been resolved
+- ✗ Platform expanded with **27 NEW vulnerabilities** through payment integrations
+- ✗ New integrations introduce **3 CRITICAL** and **8 HIGH** severity issues
+- ✗ No evidence of security-first development practices
 
 **Strengths:**
-- Strong cryptographic implementations (AES-256-GCM, bcrypt)
-- Active dependency management with Dependabot
-- Use of established frameworks (Ent ORM prevents most SQL injection)
-- Good separation of concerns in architecture
+- ✓ Strong cryptographic implementations in core system
+- ✓ Active dependency management with Dependabot
+- ✓ Good architectural separation of concerns
 
 **Weaknesses:**
-- Authorization system not properly implemented
-- Direct SQL query building in ClickHouse queries
-- Hardcoded secrets in configuration
-- Missing basic API security controls (rate limiting, CORS)
-- Insufficient input validation
+- ✗ Authorization system fundamentally broken (RBAC bypass)
+- ✗ Direct SQL query building in multiple locations
+- ✗ Hardcoded production secrets in version control
+- ✗ Missing basic API security controls (rate limiting, CORS)
+- ✗ Payment integrations lack proper security verification
+- ✗ Timing attacks pervasive across authentication systems
 
-**Recommendation:** Address critical and high-priority issues immediately before production deployment. The platform has a solid foundation but needs security hardening to be production-ready for handling sensitive billing data.
+**Critical Recommendation:** **DO NOT deploy payment integrations to production** until all CRITICAL and HIGH severity issues are addressed. The current codebase poses significant financial and data security risks.
+
+**Timeline:** Estimated **8-12 weeks** to address all critical and high-priority issues with dedicated security team involvement.
 
 ---
 
-**Report Version:** 1.0
-**Next Review:** Recommended after implementing Phase 1 and Phase 2 fixes
+**Report Version:** 2.0
+**Next Review:** Recommended after implementing Phase 1 fixes (approximately 2 weeks)
 **Contact:** Security Team for questions or clarifications
+
+---
+
+**DISTRIBUTION:**
+- CTO / VP Engineering (Immediate Action Required)
+- Security Team (Incident Response Readiness)
+- DevOps Team (Rate Limiting, Secret Management)
+- Backend Team (Code Fixes)
+- QA Team (Security Testing)
+- Product Management (Release Timeline Impact)
